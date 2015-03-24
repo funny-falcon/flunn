@@ -25,7 +25,7 @@ class Encoder(object):
 		self.output = output
 
 	def encode(self, object):
-		if isinstance(object, list):
+		if isinstance(object, list) or isinstance(object, tuple):
 			self.encode_list(object)
 		elif isinstance(object, dict):
 			self.encode_dict(object)
