@@ -3,8 +3,10 @@
 import io
 import struct
 import math
+import sys
+import base64
 
-import flynn.data
+from .data import Tagging, Undefined
 
 class InvalidCborError(Exception):
 	pass
@@ -36,14 +38,14 @@ class Decoder(object):
 		return decoder(mtype, ainfo)
 
 	def decode_integer(self, mtype, ainfo, sign=False):
-		res = self._decode_length(mtype, ainfo)
+		res = self._decode_length(ainfo)
 		if sign is True:
 			return -1 - res
 		else:
 			return res
 
 	def decode_bytestring(self, mtype, ainfo):
-		length = self._decode_length(mtype, ainfo)
+		length = self._decode_length(ainfo)
 		if length is None:
 			res = bytearray()
 			while True:
@@ -58,7 +60,7 @@ class Decoder(object):
 			return self._read(length)
 
 	def decode_textstring(self, mtype, ainfo):
-		length = self._decode_length(mtype, ainfo)
+		length = self._decode_length(ainfo)
 		if length is None:
 			res = bytearray()
 			while True:
@@ -73,7 +75,7 @@ class Decoder(object):
 			return self._read(length).decode("utf-8")
 
 	def decode_list(self, mtype, ainfo):
-		length = self._decode_length(mtype, ainfo)
+		length = self._decode_length(ainfo)
 		if length is None:
 			res = []
 			while True:
@@ -89,7 +91,7 @@ class Decoder(object):
 			return res
 
 	def decode_dict(self, mtype, ainfo):
-		length = self._decode_length(mtype, ainfo)
+		length = self._decode_length(ainfo)
 		if length is None:
 			res = {}
 			try:
@@ -108,8 +110,8 @@ class Decoder(object):
 			return res
 
 	def decode_tagging(self, mtype, ainfo):
-		length = self._decode_length(mtype, ainfo)
-		return flynn.data.Tagging(length, self.decode())
+		length = self._decode_length(ainfo)
+		return Tagging(length, self.decode())
 
 	def decode_half_float(self, mtype, ainfo):
 		half = struct.unpack(">H", self._read(2))[0]
@@ -132,7 +134,7 @@ class Decoder(object):
 		elif ainfo == 22:
 			return None
 		elif ainfo == 23:
-			return flynn.data.Undefined
+			return Undefined
 		elif ainfo == 25:
 			return self.decode_half_float(mtype, ainfo)
 		elif ainfo == 26:
@@ -148,17 +150,17 @@ class Decoder(object):
 			byte = ord(byte)
 		return (byte & 0b11100000) >> 5, byte & 0b00011111
 
-	def _decode_length(self, mtype, ainfo):
+	def _decode_length(self, ainfo):
 		if ainfo < 24:
 			return ainfo
 		elif ainfo == 24:
-			return int.from_bytes(self._read(1), "big")
+			return from_bytes(self._read(1))
 		elif ainfo == 25:
-			return int.from_bytes(self._read(2), "big")
+			return from_bytes(self._read(2))
 		elif ainfo == 26:
-			return int.from_bytes(self._read(4), "big")
+			return from_bytes(self._read(4))
 		elif ainfo == 27:
-			return int.from_bytes(self._read(8), "big")
+			return from_bytes(self._read(8))
 		elif ainfo == 31:
 			return None
 		raise InvalidCborError("Invalid additional information {}".format(ainfo))
@@ -195,5 +197,18 @@ def load(fp, cls=Decoder, *args, **kwargs):
 def loads(data, cls=Decoder, *args, **kwargs):
 	return cls(io.BytesIO(data), *args, **kwargs).decode()
 
+def loadh(data, *args, **kwargs):
+	return loads(base64.b16decode(data), *args, **kwargs)
+
 __all__ = ["InvalidCborError", "Decoder", "load", "loads"]
 
+if sys.version_info[0] == 2:
+    import struct
+    from_formats = (None, '>B', '>H', None, '>I', None, None, None, '>Q')
+
+    def from_bytes(val):
+        return struct.unpack(from_formats[len(val)], val)[0]
+else:
+    def from_bytes(val):
+        return int.from_bytes(val, "big")
+	

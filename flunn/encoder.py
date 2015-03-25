@@ -3,6 +3,7 @@
 import io
 import sys
 import struct
+import base64
 
 if sys.version_info[0] == 2:
 	import collections as abc
@@ -10,12 +11,12 @@ if sys.version_info[0] == 2:
 else:
 	import collections.abc as abc
 	_integer_types = (int, )
+_list_types = (list, tuple)
 
 _str_type = type(u"")
 _bytes_type = type(b"")
 
-import flynn.data
-from flynn.utils import to_bytes
+from .data import Tagging, Undefined
 
 class EncoderError(Exception):
 	pass
@@ -24,31 +25,31 @@ class Encoder(object):
 	def __init__(self, output):
 		self.output = output
 
-	def encode(self, object):
-		if isinstance(object, list):
-			self.encode_list(object)
-		elif isinstance(object, dict):
-			self.encode_dict(object)
-		elif isinstance(object, _bytes_type):
-			self.encode_bytestring(object)
-		elif isinstance(object, _str_type):
-			self.encode_textstring(object)
-		elif isinstance(object, float):
-			self.encode_float(object)
-		elif isinstance(object, bool):
-			self.encode_boolean(object)
-		elif isinstance(object, _integer_types):
-			self.encode_integer(object)
-		elif isinstance(object, flynn.data.Tagging):
-			self.encode_tagging(object)
-		elif object is flynn.data.Undefined:
+	def encode(self, val):
+		if isinstance(val, Tagging):
+			self.encode_tagging(val)
+		elif isinstance(val, _list_types):
+			self.encode_list(val)
+		elif isinstance(val, dict):
+			self.encode_dict(val)
+		elif isinstance(val, _bytes_type):
+			self.encode_bytestring(val)
+		elif isinstance(val, _str_type):
+			self.encode_textstring(val)
+		elif isinstance(val, float):
+			self.encode_float(val)
+		elif isinstance(val, bool):
+			self.encode_boolean(val)
+		elif isinstance(val, _integer_types):
+			self.encode_integer(val)
+		elif val is Undefined:
 			self.encode_undefined()
-		elif object is None:
+		elif val is None:
 			self.encode_null()
-		elif isinstance(object, abc.Iterable):
-			self.encode_infinite_list(object)
+		elif isinstance(val, abc.Iterable):
+			self.encode_infinite_list(val)
 		else:
-			raise EncoderError("Object of type {} is not serializable".format(type(object)))
+			raise EncoderError("val of type {} is not serializable".format(type(val)))
 
 	def encode_list(self, list):
 		self._write(_encode_ibyte(4, len(list)))
@@ -99,7 +100,7 @@ class Encoder(object):
 			self._write(_encode_ibyte(7, 21))
 		elif boolean is False:
 			self._write(_encode_ibyte(7, 20))
-	
+
 	def encode_null(self):
 		self._write(_encode_ibyte(7, 22))
 
@@ -148,10 +149,10 @@ class InfiniteEncoder(Encoder):
 
 	def encode_list(self, object):
 		self.encode_infinite_list(object)
-	
+
 	def encode_dict(self, object):
 		self.encode_infinite_dict(object.items())
-	
+
 	def encode_textstring(self, object):
 		if len(object) <= self.chunksize:
 			Encoder.encode_textstring(self, object)
@@ -168,6 +169,20 @@ class InfiniteEncoder(Encoder):
 			generator = (object[n*self.chunksize:(n+1)*self.chunksize] for n in range(chunks))
 			self.encode_infinite_bytestring(generator)
 
+def _encode_ibyte(major, length):
+	if length < 24:
+		return struct.pack('>B', (major << 5) | length)
+	elif length < 256:
+		return struct.pack('>BB', (major << 5) | 24, length)
+	elif length < 65536:
+		return struct.pack('>BH', (major << 5) | 25, length)
+	elif length < 4294967296:
+		return struct.pack('>BI', (major << 5) | 26, length)
+	elif length < 18446744073709551616:
+		return struct.pack('>BQ', (major << 5) | 27, length)
+	else:
+		return None
+
 def dump(obj, io, cls=Encoder, *args, **kwargs):
 	cls(io, *args, **kwargs).encode(obj)
 
@@ -176,19 +191,8 @@ def dumps(obj, *args, **kwargs):
 	dump(obj, buf, *args, **kwargs)
 	return buf.getvalue()
 
-def _encode_ibyte(major, length):
-	if length < 24:
-		return to_bytes((major << 5) | length, 1, "big")
-	elif length < 256:
-		return to_bytes((major << 5) | 24, 1, "big") + to_bytes(length, 1, "big")
-	elif length < 65536:
-		return to_bytes((major << 5) | 25, 1, "big") + to_bytes(length, 2, "big")
-	elif length < 4294967296:
-		return to_bytes((major << 5) | 26, 1, "big") + to_bytes(length, 4, "big")
-	elif length < 18446744073709551616:
-		return to_bytes((major << 5) | 27, 1, "big") + to_bytes(length, 8, "big")
-	else:
-		return None
+def dumph(*args, **kwargs):
+	return base64.b16encode(dumps(*args, **kwargs)).decode("utf-8")
 
 __all__ = ["Encoder", "InfiniteEncoder", "EncoderError", "dump", "dumps"]
 
