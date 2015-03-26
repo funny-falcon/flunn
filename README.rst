@@ -29,7 +29,7 @@ streaming support:
 
 Or to generate a map using an iterable:
 
-	>>> flunn.dumps((((a, a) for a in range(5)), "map"))
+	>>> flunn.dumps(flunn.mapping(((a, a) for a in range(5))))
 	b'\xbf\x00\x00\x01\x01\x02\x02\x03\x03\x04\x04\xff'
 	>>> flunn.loads(b'\xbf\x00\x00\x01\x01\x02\x02\x03\x03\x04\x04\xff')
 	{0: 0, 1: 1, 2: 2, 3: 3, 4: 4}

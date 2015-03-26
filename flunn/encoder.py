@@ -11,7 +11,7 @@ if sys.version_info[0] == 2:
 else:
 	import collections.abc as abc
 	_integer_types = (int, )
-_list_types = (list, tuple)
+_list_types = (abc.Sequence, abc.Set)
 
 _str_type = type(u"")
 _bytes_type = type(b"")
@@ -21,18 +21,22 @@ from .data import Tagging, Undefined
 class EncoderError(Exception):
 	pass
 
+class Mapping(object):
+	__slots__ = ('map')
+	def __init__(self, map):
+		self.map = map
+def mapping(obj):
+	if isinstance(obj, abc.Mapping):
+		return obj
+	else:
+		return Mapping(obj)
+
 class Encoder(object):
 	def __init__(self, output):
 		self.output = output
 
 	def encode(self, val):
-		if isinstance(val, Tagging):
-			self.encode_tagging(val)
-		elif isinstance(val, _list_types):
-			self.encode_list(val)
-		elif isinstance(val, dict):
-			self.encode_dict(val)
-		elif isinstance(val, _bytes_type):
+		if isinstance(val, _bytes_type):
 			self.encode_bytestring(val)
 		elif isinstance(val, _str_type):
 			self.encode_textstring(val)
@@ -42,10 +46,22 @@ class Encoder(object):
 			self.encode_boolean(val)
 		elif isinstance(val, _integer_types):
 			self.encode_integer(val)
+		elif isinstance(val, abc.Sequence) or isinstance(val, abc.Set):
+			self.encode_list(val)
+		elif isinstance(val, abc.Mapping):
+			self.encode_dict(val)
+		elif isinstance(val, Tagging):
+			self.encode_tagging(val)
 		elif val is Undefined:
 			self.encode_undefined()
 		elif val is None:
 			self.encode_null()
+		elif isinstance(val, Mapping):
+			val = val.map
+			if isinstance(val, abc.Sized):
+			    self.encode_dict(val)
+			else:
+			    self.encode_infinite_dict(val)
 		elif isinstance(val, abc.Iterable):
 			self.encode_infinite_list(val)
 		else:
@@ -90,10 +106,10 @@ class Encoder(object):
 
 	def encode_tagging(self, tagging):
 		try:
-			self._write(_encode_ibyte(6, tagging[0]))
+			self._write(_encode_ibyte(6, tagging.tag))
 		except TypeError:
 			raise EncoderError("Encoding tag larger than 18446744073709551615 is not supported")
-		self.encode(tagging[1])
+		self.encode(tagging.obj)
 
 	def encode_boolean(self, boolean):
 		if boolean is True:
@@ -194,5 +210,5 @@ def dumps(obj, *args, **kwargs):
 def dumph(*args, **kwargs):
 	return base64.b16encode(dumps(*args, **kwargs)).decode("utf-8")
 
-__all__ = ["Encoder", "InfiniteEncoder", "EncoderError", "dump", "dumps"]
+__all__ = ["Encoder", "InfiniteEncoder", "EncoderError", "dump", "dumps", "dumph", "mapping"]
 

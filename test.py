@@ -60,6 +60,7 @@ expectations = [
 	([u"a", {u"b": u"c"}],     "826161A161626163", None),
 	(rangei(6),              "9F000102030405FF", [0, 1, 2, 3, 4, 5]),
 	((u"A", u"B", u"C"),       "83614161426143", [u"A", u"B", u"C"]),
+        (flunn.mapping((a,a) for a in range(2)), "BF00000101FF", {0: 0, 1: 1}),
 ]
 
 class TestFlunn(unittest.TestCase):

@@ -8,14 +8,14 @@ also a simple streaming interface for networking applications. (it is fork of fl
 
 setuptools.setup(
 	name="flunn",
-	version="1.0.0b3",
+	version="1.0.0b4",
 	packages=[
 		"flunn",
 	],
 	author="Sokolov Yura aka funny_falcon, Fritz Grimpen",
 	author_email="funny.falcon@gmail.com, fritz@grimpen.net",
 	url="https://github.com/funny-falcon/flunn.git",
-	download_url="https://github.com/funny-falcon/flunn/tarball/v1.0.0b3",
+	download_url="https://github.com/funny-falcon/flunn/tarball/v1.0.0b4",
 	license="http://opensource.org/licenses/MIT",
 	description="Simple decoder and encoder for CBOR (fork of flynn)",
 	classifiers=[

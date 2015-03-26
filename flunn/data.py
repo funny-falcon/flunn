@@ -2,7 +2,15 @@
 
 import collections
 
-Tagging = collections.namedtuple("Tagging", ["tag", "object"])
+class Tagging(object):
+        __slots__ = ("tag", "obj")
+        def __init__(self, tag, obj):
+            self.tag = tag
+            self.obj = obj
+        def __eq__(self, other):
+            return isinstance(other, Tagging) and self.tag == other.tag and self.obj == other.obj
+        def __hash__(self):
+            return hash((self.tag, self.obj))
 
 class _Undefined(object):
 	_instance = None

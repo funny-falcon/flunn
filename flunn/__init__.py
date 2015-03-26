@@ -20,6 +20,7 @@ __all__ = [
 dump = encoder.dump
 dumps = encoder.dumps
 dumph = encoder.dumph
+mapping = encoder.mapping
 
 load = decoder.load
 loads = decoder.loads

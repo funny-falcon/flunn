@@ -200,7 +200,7 @@ def loads(data, cls=Decoder, *args, **kwargs):
 def loadh(data, *args, **kwargs):
 	return loads(base64.b16decode(data), *args, **kwargs)
 
-__all__ = ["InvalidCborError", "Decoder", "load", "loads"]
+__all__ = ["InvalidCborError", "Decoder", "load", "loads", "loadh"]
 
 if sys.version_info[0] == 2:
     import struct
