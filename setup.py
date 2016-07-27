@@ -8,7 +8,7 @@ also a simple streaming interface for networking applications. (it is fork of fl
 
 setuptools.setup(
 	name="flunn",
-	version="1.0.0b4",
+	version="1.0.0",
 	packages=[
 		"flunn",
 	],
